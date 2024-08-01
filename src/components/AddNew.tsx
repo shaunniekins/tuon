@@ -1,3 +1,5 @@
+//  AddNew.tsx
+
 "use client";
 
 import {
@@ -8,16 +10,18 @@ import {
   CardBody,
   Image,
 } from "@nextui-org/react";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { GoFile } from "react-icons/go";
 import { IoReload } from "react-icons/io5";
 import { MdOutlineDone } from "react-icons/md";
 import { LessonComponent, ModuleComponent } from "./Tile";
+import { run } from "@/app/api/gemini-ai";
 
 const AddNewComponent = () => {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
@@ -64,6 +68,44 @@ const AddNewComponent = () => {
       }
     }
   };
+
+  const handleProcessAI = async () => {
+    if (file) {
+      setIsProcessing(true);
+      const formData = new FormData();
+      formData.append("file", file);
+
+      try {
+        console.log("Sending request to /api/process-gemini");
+        const response = await fetch("/api/process-gemini", {
+          method: "POST",
+          body: formData,
+        });
+        const text = await response.text();
+        if (!response.ok) {
+          throw new Error(
+            `Network response was not ok: ${response.status} ${response.statusText}`
+          );
+        }
+        const data = JSON.parse(text);
+        console.log("Gemini AI result:", data.result);
+        // Process the result further if needed
+        // router.push(`/course`);
+      } catch (error) {
+        console.error("Error processing file with Gemini AI:", error);
+        alert("An error occurred while processing the file. Please try again.");
+      } finally {
+        setIsProcessing(false);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (file) {
+      handleProcessAI();
+    }
+  }, [file]);
+
   return (
     <>
       <div className="h-[100svh] w-screen relative">
@@ -83,9 +125,7 @@ const AddNewComponent = () => {
               <Button
                 color="primary"
                 startContent={<MdOutlineDone />}
-                onClick={() => {
-                  router.push(`/course`);
-                }}
+                onClick={() => {}}
                 isDisabled={!file}
               >
                 Continue
